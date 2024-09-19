@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Lyric</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="text-center">Busca de Letras de Música</h1>
+        <form id="searchForm" class="mt-4">
+            <div class="form-group">
+                <label for="artist">Artista</label>
+                <input type="text" class="form-control" id="artist" name="artist" required>
+            </div>
+            <div class="form-group">
+                <label for="song">Música</label>
+                <input type="text" class="form-control" id="song" name="song" required>
+            </div>
+            <button type="submit" class="btn btn-primary">Buscar</button>
+        </form>
+
+        <h2 class="mt-5">Favoritos</h2>
+        <div id="favorites" class="mt-4"></div>
+
+        <div id="results" class="mt-4"></div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', loadFavorites);
+
+        document.getElementById('searchForm').addEventListener('submit', async function (e) {
+            e.preventDefault();
+            const artist = document.getElementById('artist').value;
+            const song = document.getElementById('song').value;
+
+            const response = await fetch('/search', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                },
+                body: new URLSearchParams({ artist, song }),
+            });
+
+            const data = await response.json();
+            displayResults(data);
+        });
+
+        function loadFavorites() {
+            const favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+            const favoritesDiv = document.getElementById('favorites');
+            favoritesDiv.innerHTML = ''; // Limpar a lista anterior
+
+            if (favorites.length === 0) {
+                favoritesDiv.innerHTML = '<p>Nenhum favorito encontrado.</p>';
+                return;
+            }
+
+            const list = document.createElement('ul');
+            list.className = 'list-group';
+
+            favorites.forEach(lyricId => {
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item';
+                listItem.innerHTML = `Música: ${lyricId}`;
+                list.appendChild(listItem);
+            });
+
+            favoritesDiv.appendChild(list);
+        }
+
+        function displayResults(data) {
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = ''; // Limpar resultados anteriores
+
+            const list = document.createElement('ul');
+            list.className = 'list-group';
+
+            data.forEach(item => {
+                const listItem = document.createElement('li');
+                listItem.className = 'list-group-item';
+                listItem.innerHTML = `
+                    <strong>${item.Song}</strong> - <em>${item.Artist}</em>
+                    <a href="${item.SongUrl}" target="_blank">Ver letra</a>
+                    <button class="btn btn-primary add-favorite" data-id="${item.LyricId}">Adicionar aos Favoritos</button>
+                `;
+                list.appendChild(listItem);
+            });
+
+            resultsDiv.appendChild(list);
+
+            document.querySelectorAll('.add-favorite').forEach(button => {
+                button.addEventListener('click', function() {
+                    const lyricId = this.getAttribute('data-id');
+                    addToFavorites(lyricId);
+                });
+            });
+        }
+
+        function addToFavorites(lyricId) {
+            let favorites = JSON.parse(localStorage.getItem('favorites')) || [];
+            if (!favorites.includes(lyricId)) {
+                favorites.push(lyricId);
+                localStorage.setItem('favorites', JSON.stringify(favorites));
+                alert('Adicionado aos Favoritos!');
+                loadFavorites(); // Atualiza a lista de favoritos
+            } else {
+                alert('Já está nos Favoritos!');
+            }
+        }
+    </script>
+</body>
+</html>
